@@ -1,5 +1,4 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.decorators import dag, task
 from datetime import datetime
 
 from etl.extract import extract
@@ -8,45 +7,35 @@ from etl.load import load
 
 
 default_args = {
-
-    "start_date": datetime(2024,1,1)
-
+    "start_date": datetime(2024, 1, 1)
 }
 
-with DAG(
 
+@dag(
     dag_id="weather_etl",
-
     default_args=default_args,
-
-    schedule_interval="@daily",
-
+    schedule="@daily",
     catchup=False
+)
+def weather_dag():
 
-) as dag:
+    @task
+    def extraction():
+        extract()
 
-    extract_task = PythonOperator(
+    @task
+    def transformation():
+        transform()
 
-        task_id="extract",
+    @task
+    def loading():
+        load()
 
-        python_callable=extract
-
-    )
-
-    transform_task = PythonOperator(
-
-        task_id="transform",
-
-        python_callable=transform
-
-    )
-
-    load_task = PythonOperator(
-
-        task_id="load",
-
-        python_callable=load
-
-    )
+    extract_task = extraction()
+    transform_task = transformation()
+    load_task = loading()
 
     extract_task >> transform_task >> load_task
+
+
+weather_dag()
